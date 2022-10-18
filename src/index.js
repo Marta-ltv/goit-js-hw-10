@@ -1,7 +1,11 @@
 import './css/styles.css';
 import debounce from 'lodash.debounce';
 import { Notify } from 'notiflix/build/notiflix-notify-aio';
-import { fetchCountries } from './js/fetchCountries';
+import FetchApiService from './js/fetchCountries';
+
+const fetchApiService = new FetchApiService();
+
+const DEBOUNCE_DELAY = 300;
 
 const searchCountry = document.querySelector('#search-box');
 const allCountries = document.querySelector('.country-list');
@@ -9,29 +13,26 @@ const infoCountry = document.querySelector('.country-info');
 
 searchCountry.addEventListener('input', debounce(onInputSearch, DEBOUNCE_DELAY));
 
-const DEBOUNCE_DELAY = 300;
-
-
 function markupAllCountries(data) {
     return data.map(country => {
         return `<li class="country-items">
-  <img src="${country.flag.svg}" alt="Flag" width = 20, height = 15></img>
-  ${country.name.official}
-</li>`;
+  <img class="country-img" src="${country.flags.svg}" alt="Flag" width = 20, height = 15></img>
+  ${country.name.official}</li>`;
     }).join('');
 }
 
 function markupOneCountry(data) {
     return data.map(country => {
-        return `<img src="${country.flag.svg}" alt="Flag" width = 20, height = 15></img>
-  <h1 class="country-info-title"${country.name.official}></h1>
-  <p class="country-info-items">Capital:<span>${country.capital}</span></p>
-  <p class="country-info-items">Population:<span>${country.population}</span></p>
-  <p class="country-info-items">Languages:<span>${country.languages}</span></p>`
+        return `<img src="${country.flags.svg}" alt="Flag" width="70" height="65"></img>
+                <h2 class="country-info-title">${country.name.official}</h2>
+            <p>Capital: <span>${country.capital}</span></p>
+            <p>Population: <span>${country.population}</span></p>
+            <p>Languages: <span>${Object.values(country.languages)}</span></p>`
     }).join('');
 }
 
 function renderMarkup(data) {
+    clearPage();
     if (data.length === 1) {
         allCountries.insertAdjacentHTML('beforeend', markupOneCountry(data));
     } else if (data.length > 1 && data.length <= 10) {
@@ -41,9 +42,24 @@ function renderMarkup(data) {
     }
 }
 
-    
-
 function onInputSearch(e) {
     e.preventDefault();
+    if (e.target.value.trim() === '') {
+        clearPage();
+        return;
+    }
+    fetchApiService.searchCountry = e.target.value.trim();
+    fetchApiService
+        .fetchCountries()
+        .then(data => renderMarkup(data))
+        .catch(onError);
 }
 
+const onError = () => {
+    Notify.failure('Oops, there is no country with that name');
+};
+
+function clearPage() {
+    allCountries.innerHTML = '';
+    infoCountry.innerHTML = '';
+}
